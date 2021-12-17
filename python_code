@@ -1,0 +1,73 @@
+# AI based Chat-bot using Term frequency and inverse document frequency
+# Author - Fazil Ahamed M
+
+import pandas as pd
+import nltk 
+import re
+from nltk.stem import wordnet # to perform lemmitization
+from sklearn.feature_extraction.text import CountVectorizer # to perform bow
+from sklearn.feature_extraction.text import TfidfVectorizer # to perform tfidf
+from nltk import pos_tag # for parts of speech
+from sklearn.metrics import pairwise_distances # to perfrom cosine similarity
+from nltk import word_tokenize # to create tokens
+from nltk.corpus import stopwords # for stop words
+
+
+def text_normalization(text):
+    text = str(text).lower() # text to lower case
+    spl_char_text = re.sub(r'[^ a-z]','',text) # removing special characters
+    tokens = nltk.word_tokenize(spl_char_text) # word tokenizing
+    lemma = wordnet.WordNetLemmatizer() # intializing lemmatization
+    tags_list = pos_tag(tokens,tagset=None) # parts of speech
+    lemma_words = []   # empty list 
+    for token,pos_token in tags_list:
+        if pos_token.startswith('V'):   	# Verb
+            pos_val = 'v'
+        elif pos_token.startswith('J'): 	# Adjective
+            pos_val = 'a'
+        elif pos_token.startswith('R'): 	# Adverb
+            pos_val = 'r'
+        else:
+            pos_val = 'n' 					# Noun
+        lemma_token = lemma.lemmatize(token,pos_val) # performing lemmatization
+        lemma_words.append(lemma_token) # appending the lemmatized token into a list
+    
+    return " ".join(lemma_words) # returns the lemmatized tokens as a sentence
+
+
+def chat_tfidf(text):
+    lemma = text_normalization(text)
+    tf = tfidf.transform([lemma]).toarray()
+    cos = 1 - pairwise_distances(df_tfidf, tf, metric = 'cosine')
+    index_value = cos.argmax()
+    return df['Text Response'].loc[index_value]
+
+
+stop = stopwords.words('english')
+df = pd.read_excel('dialog_talk_agent.xlsx')    
+df.ffill(axis = 0,inplace=True) # fills the null value with the previous value.
+df['Lemmatized_text'] = df['Context'].apply(text_normalization) # applying the fuction to the dataset to get clean text
+
+tfidf = TfidfVectorizer()
+x_tfidf = tfidf.fit_transform(df['Lemmatized_text']).toarray()
+df_tfidf = pd.DataFrame(x_tfidf, columns = tfidf.get_feature_names())
+
+Question = None # to clear any previous conversation
+
+while True:
+    Question = input("User : ")
+    if Question == "exit":
+        break
+    Q = []
+    a = Question.split()
+    for i in a:
+        if i in stop:
+            continue
+        else:
+            Q.append(i)
+        b = " ".join(Q)
+    Question_lemma = text_normalization(b)
+    Question_tfidf = tfidf.transform([Question_lemma]).toarray()
+    Answer = chat_tfidf(Question)
+    print("Bot  : " + Answer)
+
